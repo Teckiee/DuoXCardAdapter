@@ -28,8 +28,8 @@ String executeCommand(String Command) {
 
     if (Command.indexOf(F("card1:mode:usb")) > -1){
       Serial1Flush();
-      SerialCard1.print("*8C80U#");
-      Answer = SerialCard1.readStringUntil('#');
+      //SerialCard1.print("*8C80U#");
+      //Answer = SerialCard1.readStringUntil('#');
     }else if (Command.indexOf(F("card1:mode:card")) > -1){
       Serial1Flush();
       SerialCard1.print("*8C80C#");
@@ -88,8 +88,8 @@ String executeCommand(String Command) {
 
     }else if (Command.indexOf(F("card2:mode:usb")) > -1){
       Serial2Flush();
-      SerialCard2.print("*8C80U#");
-      Answer = SerialCard2.readStringUntil('#');
+      //SerialCard2.print("*8C80U#");
+      //Answer = SerialCard2.readStringUntil('#');
     }else if (Command.indexOf(F("card2:mode:card")) > -1){
       Serial2Flush();
       SerialCard2.print("*8C80C#");
@@ -152,6 +152,8 @@ String executeCommand(String Command) {
 
 
 
+    }else if (Command.indexOf(F("clock?")) > -1){
+      Answer = checkBclk() ? "OK" : "CLOCK_ERROR";
     }else{
       // unknown command
       Answer = "UNKNOWN_CMD";
