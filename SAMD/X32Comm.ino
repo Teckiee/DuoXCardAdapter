@@ -291,7 +291,7 @@ void x32InitCard2() {
   SerialCard2.print("*4R:W0281C0:W0800:W0280#");
   SerialCard2.print("*8S#");
   delay(120);
-  SerialCard1.print("*8S#");
+  SerialCard2.print("*8S#");
 
   //delay(card2IsXUsb ? 2000 : 1000);
 

@@ -38,6 +38,8 @@ void setup() {
   // initialize peripherals
   //statusLed.begin();
   //statusLed.show();
+   
+  
   // initialize communication
   // Serial for communication via USB
   Serial.begin(115200);
@@ -46,14 +48,16 @@ void setup() {
   pinMode(CARD1_READY_PIN, INPUT_PULLDOWN); // CardReady-signal #1
   pinMode(CARD2_READY_PIN, INPUT_PULLDOWN); // CardReady-signal #2
   delay(9000);
+  // the cards need BCLK and FrameSync as soon as they boot
+  startTdmFrameSync();
+  
   digitalWrite(CARD1_READY_PIN, LOW);
   digitalWrite(CARD2_READY_PIN, LOW); 
   delay(102);
   digitalWrite(CARD1_READY_PIN, HIGH);
-  digitalWrite(CARD2_READY_PIN, HIGH); 
-  // the cards need BCLK and FrameSync as soon as they boot
-  startTdmFrameSync();
+  digitalWrite(CARD2_READY_PIN, HIGH);
 
+  
   
 
   pinMode(CARD1_MIDI_RX_PIN, OUTPUT);
