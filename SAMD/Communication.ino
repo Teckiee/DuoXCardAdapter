@@ -152,6 +152,13 @@ String executeCommand(String Command) {
 
 
 
+    }else if (Command.indexOf(F("fsync:edge:falling")) > -1){
+      Answer = setTdmFsyncFalling(true) ? "OK" : "ERROR";
+    }else if (Command.indexOf(F("fsync:edge:rising")) > -1){
+      Answer = setTdmFsyncFalling(false) ? "OK" : "ERROR";
+    }else if (Command.indexOf(F("fsync:shift:")) > -1){
+      // fsync:shift:N delays the frame-sync by N bit-clocks (1..255), e.g. 255 = one bit-clock earlier
+      Answer = shiftTdmFsync(Command.substring(Command.indexOf("shift:") + 6).toInt()) ? "OK" : "ERROR";
     }else if (Command.indexOf(F("clock?")) > -1){
       Answer = checkBclk() ? "OK" : "CLOCK_ERROR";
     }else{
