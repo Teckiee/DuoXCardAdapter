@@ -38,7 +38,9 @@ void setup() {
   // initialize peripherals
   //statusLed.begin();
   //statusLed.show();
-   
+  
+  // the cards need BCLK and FrameSync as soon as they boot
+  startTdmFrameSync();
   
   // initialize communication
   // Serial for communication via USB
@@ -48,8 +50,7 @@ void setup() {
   pinMode(CARD1_READY_PIN, INPUT_PULLDOWN); // CardReady-signal #1
   pinMode(CARD2_READY_PIN, INPUT_PULLDOWN); // CardReady-signal #2
   delay(9000);
-  // the cards need BCLK and FrameSync as soon as they boot
-  startTdmFrameSync();
+  
   
   digitalWrite(CARD1_READY_PIN, LOW);
   digitalWrite(CARD2_READY_PIN, LOW); 
@@ -63,7 +64,7 @@ void setup() {
   pinMode(CARD1_MIDI_RX_PIN, OUTPUT);
   digitalWrite(CARD1_MIDI_RX_PIN, HIGH);  
   pinMode(CARD2_MIDI_RX_PIN, OUTPUT);
-  digitalWrite(CARD1_MIDI_RX_PIN, HIGH);
+  digitalWrite(CARD2perrac_MIDI_RX_PIN, HIGH);
   
   // Serial for communication with Behringer X32 MainControl
   Serial.println("Dual X-CARD Controller " + String(versionstring) + " | " + String(compile_date)); // send to USB
