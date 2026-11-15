@@ -129,6 +129,76 @@ bool shiftTdmFsync(uint32_t n) {
   return true;
 }
 
+// Capture the first 40 data bits after frame-sync rises from both TDM data lines.
+bool sniffTdmFrame() {
+  const uint16_t instr[] = {
+    (uint16_t)pio_encode_wait_gpio(false, TDM_FSYNC_PIN),
+    (uint16_t)pio_encode_wait_gpio(true, TDM_FSYNC_PIN),
+    (uint16_t)pio_encode_wait_gpio(false, TDM_BCLK_PIN),
+    (uint16_t)pio_encode_wait_gpio(true, TDM_BCLK_PIN),
+    (uint16_t)pio_encode_in(pio_pins, 2),
+    (uint16_t)pio_encode_jmp_x_dec(2),
+    (uint16_t)pio_encode_push(false, false),
+  };
+  pio_program_t program = {};
+  program.instructions = instr;
+  program.length = sizeof(instr) / sizeof(instr[0]);
+  program.origin = -1;
+
+  PIO pio;
+  uint sm;
+  uint offset;
+  if (!pio_claim_free_sm_and_add_program(&program, &pio, &sm, &offset)) {
+    return false;
+  }
+
+  pio_sm_config c = pio_get_default_sm_config();
+  sm_config_set_in_pins(&c, TDM_OUT0_PIN);
+  sm_config_set_in_shift(&c, true, true, 32);
+  sm_config_set_wrap(&c, offset, offset + 6);
+  sm_config_set_clkdiv(&c, 1.0f);
+
+  pio_gpio_init(pio, TDM_OUT0_PIN);
+  pio_gpio_init(pio, TDM_IN0_PIN);
+  pio_sm_set_consecutive_pindirs(pio, sm, TDM_OUT0_PIN, 2, false);
+  pio_sm_init(pio, sm, offset, &c);
+  pio_sm_put_blocking(pio, sm, 39); // 40 samples, each containing both data pins
+  pio_sm_exec(pio, sm, pio_encode_pull(false, false));
+  pio_sm_exec(pio, sm, pio_encode_mov(pio_x, pio_osr));
+
+  uint32_t words[3];
+  uint count = 0;
+  uint32_t start = micros();
+  pio_sm_set_enabled(pio, sm, true);
+  while ((count < 3) && ((micros() - start) < 100000)) {
+    if (!pio_sm_is_rx_fifo_empty(pio, sm)) {
+      words[count++] = pio_sm_get(pio, sm);
+    } else {
+      tight_loop_contents();
+    }
+  }
+  pio_sm_set_enabled(pio, sm, false);
+  pio_remove_program_and_unclaim_sm(&program, pio, sm, offset);
+
+  if (count != 3) {
+    return false;
+  }
+
+  Serial.println(F("First 40 bits after FCLK rising (slot 1 + first 8 bits of slot 2):"));
+  for (uint line = 0; line < 2; ++line) {
+    Serial.print(line == 0 ? F("out0 GP12: ") : F("in0  GP13: "));
+    for (uint bit = 0; bit < 40; ++bit) {
+      uint32_t sample = (words[bit / 16] >> (30 - 2 * (bit % 16))) & 0x3;
+      Serial.print((sample >> line) & 1);
+      if ((bit % 8) == 7) {
+        Serial.print(' ');
+      }
+    }
+    Serial.println();
+  }
+  return true;
+}
+
 // Measure the frequency of the bit-clock on TDM_BCLK_PIN by counting rising edges with a second
 // state-machine for 10 ms. Returns the frequency in Hz or 0 if there are no edges.
 uint32_t measureBclkHz() {

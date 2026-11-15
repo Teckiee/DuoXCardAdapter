@@ -14,6 +14,8 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define CARD2_MIDI_TX_PIN    27
 #define TDM_BCLK_PIN         6   // 12.288 MHz bit-clock from oscillator (input)
 #define TDM_FSYNC_PIN        7   // 48 kHz frame-sync (output)
+#define TDM_OUT0_PIN         12  // WSG-to-USB TDM data, connected to the RP2040 for sniffing
+#define TDM_IN0_PIN          13  // USB-to-WSG TDM data, connected to the RP2040 for sniffing
 #define CARD2_READY_PIN      10  // CardReady-signal of X-CARD #2
 #define CARD1_READY_PIN      11  // CardReady-signal of X-CARD #1
 #define STATUS_LED_PIN       16  // WS2812 RGB-LED on RP2040-Zero

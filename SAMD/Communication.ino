@@ -159,6 +159,8 @@ String executeCommand(String Command) {
     }else if (Command.indexOf(F("fsync:shift:")) > -1){
       // fsync:shift:N delays the frame-sync by N bit-clocks (1..255), e.g. 255 = one bit-clock earlier
       Answer = shiftTdmFsync(Command.substring(Command.indexOf("shift:") + 6).toInt()) ? "OK" : "ERROR";
+    }else if (Command == F("tdm:sniff")){
+      Answer = sniffTdmFrame() ? "OK" : "TDM_SNIFF_ERROR: check BCLK/FCLK and available PIO state machines";
     }else if (Command.indexOf(F("clock?")) > -1){
       Answer = checkBclk() ? "OK" : "CLOCK_ERROR";
     }else{

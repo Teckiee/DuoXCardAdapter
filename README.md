@@ -27,3 +27,6 @@ The card can be used in general as shown in my Youtube-video. But the steepness 
 Have a look at the Youtube-video to see this card in action:
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/3Uor9Ot7x9M/0.jpg)](https://www.youtube.com/watch?v=3Uor9Ot7x9M)
+
+## RP2040 TDM data capture
+The RP2040 firmware can capture the first 40 bits after FCLK rises from the data lines when they are connected to GP12 and GP13. Send `tdm:sniff` over USB serial to print the WSG-to-USB (`out0`, GP12) and USB-to-WSG (`in0`, GP13) bits. The capture contains all 32 bits of slot 1 and the first 8 bits of slot 2.
