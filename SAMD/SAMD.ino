@@ -64,12 +64,12 @@ void setup() {
   pinMode(CARD1_MIDI_RX_PIN, OUTPUT);
   digitalWrite(CARD1_MIDI_RX_PIN, HIGH);  
   pinMode(CARD2_MIDI_RX_PIN, OUTPUT);
-  digitalWrite(CARD2perrac_MIDI_RX_PIN, HIGH);
+  digitalWrite(CARD2_MIDI_RX_PIN, HIGH);
   
   // Serial for communication with Behringer X32 MainControl
   Serial.println("Dual X-CARD Controller " + String(versionstring) + " | " + String(compile_date)); // send to USB
   Serial.println(F("Check bit-clock oscillator..."));
-  checkBclk();
+  //checkBclk();
   Serial.println(F("Init UART-ports..."));
   SerialCard1.setTX(CARD1_UART_TX_PIN);
   SerialCard1.setRX(CARD1_UART_RX_PIN);
