@@ -86,7 +86,7 @@ void handleXCard2Communication() {
 
 // identify-response of the cards:
 //   *8X-UREC:A:12#  *8X-USB:A:3#  *8X-DANTE:A:1#  *8X_MADI:A:1#  (X32 cards)
-//   *8DN32-WSG:A:1#  *8DN32-UREC:A:12#                           (DN32 cards)
+//   *8DN32-WSG:A:1#  *8DN32-DANTE:A:1#  *8DN32-UREC:A:12#        (DN32 cards)
 bool isIdentifyResponse(const String& ans) {
   return (ans.indexOf("*8X") != -1) || (ans.indexOf("*8DN32") != -1);
 }
@@ -114,205 +114,102 @@ void x32FollowUpIdentify(Stream& port, uint32_t identifySent) {
   Serial.println("    Response " + reply);
 }
 
-void x32InitCard1() {
-  delay(1000); // X32 would take some time to boot. So we have to be patient and wait here some time to let X-Card initialize
-  Serial.println(F("   waiting... 3s"));
-  delay(1000); // X32 would take some time to boot. So we have to be patient and wait here some time to let X-Card initialize
-  Serial.println(F("   waiting... 2s"));
-  delay(1000); // X32 would take some time to boot. So we have to be patient and wait here some time to let X-Card initialize
-  Serial.println(F("   waiting... 1s"));
-  delay(1000); // X32 would take some time to boot. So we have to be patient and wait here some time to let X-Card initialize
-  Serial.println(F("   wait for CardReady-Signal..."));
-  
-  // wait until card is ready (that's when CardRead-Signal is high)
-  while(!digitalRead(CARD1_READY_PIN)) {
-    delay(10);
-  }
-  delay(100);
-
-  // now initialize the card #1
-  Serial1Flush(); // flush serial for card #1
-  String ans;
-  Serial.println(F("   Initializing Card #1..."));
-  sendSlotProbe(SerialCard1);
-  Serial.println(F("       Sending *8I#..."));
-  SerialCard1.print("*8I#"); // send identify-command
-  uint32_t identifySent = millis();
-  ans = SerialCard1.readStringUntil('#'); // ans should be *8X-UREC:A:12# or *8DN32-WSG:A:1#
-  while (!isIdentifyResponse(ans)) {
-    Serial.println("       Ignoring response " + ans);
-    ans = SerialCard1.readStringUntil('#');
-  }
-  Serial.println("    Found " + ans);
-  card1KeepAlive = enableKeepAliveIfNeeded(1, ans);
-  bool card1IsXUsb = (ans.indexOf("*8X-USB") != -1);
-  x32FollowUpIdentify(SerialCard1, identifySent);
-
-  delay(250);
-/*
-  Serial.println(F("       Sending *8R#..."));
-  SerialCard1.print("*8R#"); // send second identify-command
-  ans = SerialCard1.readStringUntil('#'); // ans should be *8X-UREC:A:12#
-  while (ans.indexOf("*8X") == -1) {
-    Serial.println("       Ignoring response " + ans);
-    ans = SerialCard1.readStringUntil('#'); // ans should be *8X-UREC:A:12#
-  }
-  Serial.println("    Found " + ans);
-
-  delay(250);
-*/
-
-  // now send a bunch of initialization commands - don't know for what - just doing what the X32 is doing
-  Serial.println(F("       Sending long Init-Command..."));
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard1.print("*1G" + String(i) + "0000#");
-    if (i == 0) {
-      SerialCard1.print("*1G" + String(i) + "0001#");
-    } else {
-      SerialCard1.print("*1G" + String(i) + "0000#");
-    }
-  }
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard1.print("*0G" + String(i) + "0000#");
-    SerialCard1.print("*0G" + String(i) + "0000#");
-  }
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard1.print("*3G" + String(i) + "0000#");
-    SerialCard1.print("*3G" + String(i) + "0000#");
-    if (i == 0) {
-       delay(18);
-    }
-  }
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard1.print("*2G" + String(i) + "0000#");
-    SerialCard1.print("*2G" + String(i) + "0000#");
-  }
-  SerialCard1.print("*0R:W018B#");
-  SerialCard1.print("*1R:W018B#");
-  SerialCard1.print("*4R:W0281C0:W0800:W0280#");
-  SerialCard1.print("*8S#");
-  delay(120);
-  lastKeepAlive = millis();
-  SerialCard1.print("*8S#");
-
-  // set Card to USB-Mode
-  if (card1IsXUsb) {
-    Serial.println(F("       X-USB found, sending *8C80#..."));
-    SerialCard1.print("*8C80#");
-  } else {
-    //Serial.println(F("       Set Card-Mode to USB via *8C80U#..."));
-    //SerialCard1.print("*8C80U#"); // 32 channels from USB
-  }
-  Serial.println(F("   Done."));
-}
-
-
-void x32InitCard2() {
-  // wait up to 10s until card is ready (that's when CardReady-Signal is high)
-  Serial.println(F("   wait for CardReady-Signal of Card #2..."));
-  uint16_t readyTimeout = 200;
-  while(!digitalRead(CARD2_READY_PIN) && (readyTimeout > 0)) {
-    delay(10);
-    readyTimeout--;
-  }
-  if (!digitalRead(CARD2_READY_PIN)) {
-    Serial.println(F("   Card #2 is not ready - sorry :-("));
-    return;
-  }
-  delay(100);
-
-  // now initialize the card #2
-  String ans;
-  Serial.println(F("   Initializing Card #2..."));
-
-  // the probe-commands for the other slots have to be sent first
-  Serial2Flush(); // flush serial for card #2
-  sendSlotProbe(SerialCard2);
-
-  Serial.println(F("       Sending *8I#..."));
-
-  // if we can not communicate with card #2, exit
-  SerialCard2.print("*8I#"); // send identify-command
-  uint32_t identifySent = millis();
-
-  if (!waitForCard2Response(2)) {
-    Serial.println(F("   Could not find Card #2 - sorry :-("));
-    return;
-  }
-
-  ans = SerialCard2.readStringUntil('#'); // ans should be *8X-UREC:A:12# or *8DN32-WSG:A:1#
-  while (!isIdentifyResponse(ans)) {
-    Serial.println("       Ignoring response " + ans);
-    ans = SerialCard2.readStringUntil('#');
-  }
-  Serial.println("    Found " + ans);
-  card2KeepAlive = enableKeepAliveIfNeeded(2, ans);
-  bool card2IsXUsb = (ans.indexOf("*8X-USB") != -1);
-  x32FollowUpIdentify(SerialCard2, identifySent);
-
-  delay(250);
-/*
-  Serial.println(F("       Sending *8R#..."));
-  SerialCard2.print("*8R#"); // send second identify-command
-  ans = SerialCard2.readStringUntil('#'); // ans should be *8X-UREC:A:12#
-  while (ans.indexOf("*8X") == -1) {
-    Serial.println("       Ignoring response " + ans);
-    ans = SerialCard2.readStringUntil('#'); // ans should be *8X-UREC:A:12#
-  }
-  Serial.println("    Found " + ans);
-
-  delay(250);
-*/
-
-  // now send a bunch of initialization commands - don't know for what - just doing what the X32 is doing
-  Serial.println(F("       Sending long Init-Command..."));
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard2.print("*1G" + String(i) + "0000#");
-    if (i == 0) {
-      SerialCard2.print("*1G" + String(i) + "0001#");
-    } else {
-      SerialCard2.print("*1G" + String(i) + "0000#");
-    }
-  }
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard2.print("*0G" + String(i) + "0000#");
-    SerialCard2.print("*0G" + String(i) + "0000#");
-  }
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard2.print("*3G" + String(i) + "0000#");
-    SerialCard2.print("*3G" + String(i) + "0000#");
-  }
-  for (uint8_t i=0; i<8; i++) {
-    SerialCard2.print("*2G" + String(i) + "0000#");
-    SerialCard2.print("*2G" + String(i) + "0000#");
-  }
-  SerialCard2.print("*0R:W018B#");
-  SerialCard2.print("*1R:W018B#");
-  SerialCard2.print("*4R:W0281C0:W0800:W0280#");
-  SerialCard2.print("*8S#");
-  delay(120);
-  SerialCard2.print("*8S#");
-
-  //delay(card2IsXUsb ? 2000 : 1000);
-
-  // set Card to USB-Mode
-  if (card2IsXUsb) {
-    Serial.println(F("       X-USB found, sending *8C80#..."));
-    SerialCard2.print("*8C80#");
-  } else {
-    //Serial.println(F("       Set Card-Mode to USB via *8C80U#..."));
-    //SerialCard2.print("*8C80U#"); // 32 channels from USB
-  }
-  Serial.println(F("   Done."));
-}
-
-bool waitForCard2Response(uint8_t maxSeconds) {
+bool waitForCardResponse(Stream& port, uint8_t card, uint8_t maxSeconds) {
   uint8_t cardTimeoutCounter = 0;
-  while ((SerialCard2.available() < 4) && (cardTimeoutCounter < maxSeconds)) { // we expect either *8BE# or *8X-UREC:A:12#
+  while ((port.available() < 4) && (cardTimeoutCounter < maxSeconds)) { // we expect either *8BE# or *8X-UREC:A:12#
     Serial.println(F("       Waiting for response..."));
     cardTimeoutCounter += 1;
     delay(1000);
   }
-  Serial.println("       We received " + String(SerialCard2.available()) + "bytes from card...");
-  return (SerialCard2.available() >= 4);
+  Serial.println("       We received " + String(port.available()) + " bytes from card #" + String(card) + "...");
+  return (port.available() >= 4);
+}
+
+void sendLongInitCommand(Stream& port) {
+  Serial.println(F("       Sending long Init-Command..."));
+  for (uint8_t i=0; i<8; i++) {
+    port.print("*1G" + String(i) + "0000#");
+    if (i == 0) {
+      port.print("*1G" + String(i) + "0001#");
+    } else {
+      port.print("*1G" + String(i) + "0000#");
+    }
+  }
+  for (uint8_t i=0; i<8; i++) {
+    port.print("*0G" + String(i) + "0000#");
+    port.print("*0G" + String(i) + "0000#");
+  }
+  for (uint8_t i=0; i<8; i++) {
+    port.print("*3G" + String(i) + "0000#");
+    port.print("*3G" + String(i) + "0000#");
+  }
+  for (uint8_t i=0; i<8; i++) {
+    port.print("*2G" + String(i) + "0000#");
+    port.print("*2G" + String(i) + "0000#");
+  }
+  port.print("*0R:W018B#");
+  port.print("*1R:W018B#");
+  port.print("*4R:W0281C0:W0800:W0280#");
+}
+
+void x32InitCard(uint8_t card, uint8_t readyPin, Stream& port, void (*flushFn)(), bool& keepAliveFlag) {
+  const uint16_t readyTimeoutTicks = 1000; // 10s with 10ms ticks
+  const uint8_t responseTimeoutSeconds = 2;
+
+  Serial.println("   wait for CardReady-Signal of Card #" + String(card) + "...");
+  uint16_t readyTimeout = readyTimeoutTicks;
+  while (!digitalRead(readyPin) && (readyTimeout > 0)) {
+    delay(10);
+    readyTimeout--;
+  }
+  if (!digitalRead(readyPin)) {
+    Serial.println("   Card #" + String(card) + " is not ready - sorry :-(");
+    return;
+  }
+  delay(100);
+
+  String ans;
+  Serial.println("   Initializing Card #" + String(card) + "...");
+
+  flushFn();
+  sendSlotProbe(port);
+  Serial.println(F("       Sending *8I#..."));
+  port.print("*8I#");
+  uint32_t identifySent = millis();
+
+  if (!waitForCardResponse(port, card, responseTimeoutSeconds)) {
+    Serial.println("   Could not find Card #" + String(card) + " - sorry :-(");
+    return;
+  }
+
+  ans = port.readStringUntil('#'); // ans should be *8X-UREC:A:12# or *8DN32-WSG:A:1#
+  while (!isIdentifyResponse(ans)) {
+    Serial.println("       Ignoring response " + ans);
+    ans = port.readStringUntil('#');
+  }
+  Serial.println("    Found " + ans);
+  keepAliveFlag = enableKeepAliveIfNeeded(card, ans);
+  bool cardIsXUsb = (ans.indexOf("*8X-USB") != -1);
+  x32FollowUpIdentify(port, identifySent);
+
+  delay(250);
+  sendLongInitCommand(port);
+  port.print("*8S#");
+  delay(120);
+  lastKeepAlive = millis();
+  port.print("*8S#");
+
+  if (cardIsXUsb) {
+    Serial.println(F("       X-USB found, sending *8C80#..."));
+    port.print("*8C80#");
+  }
+  Serial.println(F("   Done."));
+}
+
+void x32InitCard1() {
+  x32InitCard(1, CARD1_READY_PIN, SerialCard1, Serial1Flush, card1KeepAlive);
+}
+
+void x32InitCard2() {
+  x32InitCard(2, CARD2_READY_PIN, SerialCard2, Serial2Flush, card2KeepAlive);
 }
